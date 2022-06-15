@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Vector4 {
     pub x: f64,
     pub y: f64,
@@ -16,6 +16,10 @@ impl Vector4 {
             z: z,
             w: w,
         }
+    }
+
+    pub fn dot(&self, rhs: &Vector4) -> f64 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z + self.w * rhs.w
     }
 }
 

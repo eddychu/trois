@@ -4,26 +4,25 @@ use gltf::{Document, Gltf};
 use crate::vector2::Vector2;
 use crate::vector3::Vector3;
 use crate::vector4::Vector4;
-
-struct Node {
-    mesh: Option<u32>,
-    children: Vec<u32>,
-    parent: Option<u32>,
-    index: u32,
+#[derive(Debug)]
+pub struct Node {
+    pub mesh: Option<u32>,
+    pub children: Vec<u32>,
+    pub parent: Option<u32>,
+    pub index: u32,
 }
 
-struct Mesh {
-    first_index: u32,
-    num_indices: u32,
-    first_vertex: u32,
-    num_vertices: u32,
+pub struct Mesh {
+    pub first_index: u32,
+    pub num_indices: u32,
+    pub first_vertex: u32,
+    pub num_vertices: u32,
 }
 
 pub struct Scene {
     nodes: Vec<Node>,
     meshes: Vec<Mesh>,
     root: Option<u32>,
-
     vertices: Vec<Vector3>,
     normals: Vec<Vector3>,
     tex_coords: Vec<Vector2>,
@@ -41,6 +40,30 @@ impl Scene {
             tex_coords: Vec::new(),
             indices: Vec::new(),
         }
+    }
+
+    pub fn node(&self, index: u32) -> &Node {
+        &self.nodes[index as usize]
+    }
+
+    pub fn mesh(&self, index: u32) -> &Mesh {
+        &self.meshes[index as usize]
+    }
+
+    pub fn root(&self) -> &Node {
+        &self.nodes[self.root.unwrap() as usize]
+    }
+
+    pub fn position(&self, index: u32) -> &Vector3 {
+        &self.vertices[index as usize]
+    }
+
+    pub fn normal(&self, index: u32) -> &Vector3 {
+        &self.normals[index as usize]
+    }
+
+    pub fn indice(&self, index: u32) -> u32 {
+        self.indices[index as usize]
     }
 
     pub fn load(path: &str) -> Scene {
@@ -63,6 +86,8 @@ impl Scene {
     }
 
     fn process_node(&mut self, node: &gltf::Node, parent: u32, buffers: &Vec<Data>) {
+        let mesh = node.mesh().unwrap();
+
         let mut new_mesh = Mesh {
             first_index: self.indices.len() as u32,
             num_indices: 0,
@@ -75,7 +100,9 @@ impl Scene {
             parent: Some(parent),
             index: self.nodes.len() as u32,
         };
-        let mesh = node.mesh().unwrap();
+        self.nodes[parent as usize].children.push(new_node.index);
+        self.nodes.push(new_node);
+
         let primitives = mesh.primitives();
 
         for primitive in primitives {
