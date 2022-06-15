@@ -8,6 +8,8 @@ use std::{
 pub struct Mesh {
     pub vertices: Vec<Vector3>,
     pub indices: Vec<u32>,
+    pub normals: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
 }
 
 impl Mesh {
@@ -15,12 +17,16 @@ impl Mesh {
         Mesh {
             vertices: Vec::new(),
             indices: Vec::new(),
+            uvs: Vec::new(),
+            normals: Vec::new(),
         }
     }
 
     pub fn from_obj_file(path: &str) -> Mesh {
         let mut indices: Vec<u32> = Vec::new();
         let mut vertices: Vec<Vector3> = Vec::new();
+        let mut uvs: Vec<Vector2> = Vec::new();
+        let mut normals: Vec<Vector3> = Vec::new();
         let file = File::open(path).unwrap();
         let reader = BufReader::new(file);
         for line in reader.lines() {
@@ -31,13 +37,15 @@ impl Mesh {
                 "vt" => {
                     let x = parts.next().unwrap().parse::<f64>().unwrap();
                     let y = parts.next().unwrap().parse::<f64>().unwrap();
-                    println!("{:?}", Vector2::new(x, y));
+                    // println!("{:?}", Vector2::new(x, y));
+                    uvs.push(Vector2::new(x, y));
                 }
                 "vn" => {
                     let x = parts.next().unwrap().parse::<f64>().unwrap();
                     let y = parts.next().unwrap().parse::<f64>().unwrap();
                     let z = parts.next().unwrap().parse::<f64>().unwrap();
-                    println!("{:?}", Vector3::new(x, y, z));
+                    // println!("{:?}", Vector3::new(x, y, z));
+                    normals.push(Vector3::new(x, y, z));
                 }
                 "v" => {
                     let x = parts.next().unwrap().parse::<f64>().unwrap();
@@ -72,6 +80,11 @@ impl Mesh {
                 _ => {}
             }
         }
-        Mesh { vertices, indices }
+        Mesh {
+            vertices,
+            indices,
+            uvs,
+            normals,
+        }
     }
 }

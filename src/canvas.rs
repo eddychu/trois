@@ -6,6 +6,7 @@ pub struct Canvas {
     pub height: u32,
     pub channels: u32,
     pub pixels: Vec<u8>,
+    pub depths: Vec<f64>,
 }
 
 impl Canvas {
@@ -15,7 +16,17 @@ impl Canvas {
             height: height,
             channels: channels,
             pixels: vec![0; (width * height * channels) as usize],
+            depths: vec![1.0; (width * height) as usize],
         }
+    }
+
+    pub fn set_depth(&mut self, x: u32, y: u32, depth: f64) {
+        let index = (y * self.width + x) as usize;
+        self.depths[index] = depth;
+    }
+
+    pub fn get_depth(&self, x: u32, y: u32) -> f64 {
+        self.depths[(y * self.width + x) as usize]
     }
 
     pub fn set_pixel(&mut self, x: u32, y: u32, color: Vector4) {
