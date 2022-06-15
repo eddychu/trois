@@ -131,15 +131,26 @@ impl Mul for Matrix4 {
 
     fn mul(self, other: Matrix4) -> Matrix4 {
         let mut result = Matrix4::new();
-        for i in 0..4 {
-            for j in 0..4 {
-                result.m[i * 4 + j] = self.m[i * 4 + 0] * other.m[0 * 4 + j]
-                    + self.m[i * 4 + 1] * other.m[1 * 4 + j]
-                    + self.m[i * 4 + 2] * other.m[2 * 4 + j]
-                    + self.m[i * 4 + 3] * other.m[3 * 4 + j];
-            }
+        Matrix4 {
+            m: [
+                self.row(0).dot(&other.col(0)),
+                self.row(1).dot(&other.col(0)),
+                self.row(2).dot(&other.col(0)),
+                self.row(3).dot(&other.col(0)),
+                self.row(0).dot(&other.col(1)),
+                self.row(1).dot(&other.col(1)),
+                self.row(2).dot(&other.col(1)),
+                self.row(3).dot(&other.col(1)),
+                self.row(0).dot(&other.col(2)),
+                self.row(1).dot(&other.col(2)),
+                self.row(2).dot(&other.col(2)),
+                self.row(3).dot(&other.col(2)),
+                self.row(0).dot(&other.col(3)),
+                self.row(1).dot(&other.col(3)),
+                self.row(2).dot(&other.col(3)),
+                self.row(3).dot(&other.col(3)),
+            ],
         }
-        result
     }
 }
 

@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Vector2 {
     pub x: f64,
     pub y: f64,

@@ -2,14 +2,14 @@ mod camera;
 mod canvas;
 mod loader;
 mod matrix4;
+mod mesh;
 mod renderer;
-mod scene;
 mod vector2;
 mod vector3;
 mod vector4;
 use canvas::Canvas;
+use mesh::Mesh;
 use renderer::render;
-use scene::Scene;
 use vector3::Vector3;
 use vector4::Vector4;
 
@@ -18,7 +18,9 @@ fn main() {
     let mut canvas = Canvas::new(256, 256, 4);
     // canvas.draw_line(0.0, 0.0, 250.0, 250.0, color);
     // canvas.save_image("test.png");
-    let scene = Scene::load("resource/DamagedHelmet/glTF/DamagedHelmet.gltf");
+    // let scene = Scene::load("resource/DamagedHelmet/glTF/DamagedHelmet.gltf");
+    let mesh = Mesh::from_obj_file("assets/helmet/helmet.obj");
+
     let camera = camera::Camera::new(
         Vector3::new(0.0, 0.0, 5.0),
         Vector3::new(0.0, 0.0, 0.0),
@@ -28,7 +30,7 @@ fn main() {
         0.1,
         100.0,
     );
-    render(&scene, &camera, &mut canvas);
+    render(&mesh, &camera, &mut canvas);
     // println!("{:?}", scene);
     canvas.save_image("test.png");
 }

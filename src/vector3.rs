@@ -1,6 +1,6 @@
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Vector3 {
     pub x: f64,
     pub y: f64,
