@@ -10,6 +10,7 @@ pub struct Mesh {
     pub indices: Vec<u32>,
     pub normals: Vec<Vector3>,
     pub uvs: Vec<Vector2>,
+    pub diffuse_texture: Option<String>,
 }
 
 impl Mesh {
@@ -19,6 +20,7 @@ impl Mesh {
             indices: Vec::new(),
             uvs: Vec::new(),
             normals: Vec::new(),
+            diffuse_texture: None,
         }
     }
 
@@ -85,6 +87,7 @@ impl Mesh {
             indices,
             uvs,
             normals,
+            diffuse_texture: None,
         }
     }
 }
