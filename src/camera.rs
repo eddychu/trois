@@ -6,10 +6,10 @@ pub struct Camera {
     pub position: Vector3,
     pub target: Vector3,
     pub up: Vector3,
-    pub fov: f64,
-    pub aspect_ratio: f64,
-    pub near: f64,
-    pub far: f64,
+    pub fov: f32,
+    pub aspect_ratio: f32,
+    pub near: f32,
+    pub far: f32,
 }
 
 impl Camera {
@@ -17,10 +17,10 @@ impl Camera {
         position: Vector3,
         target: Vector3,
         up: Vector3,
-        fov: f64,
-        aspect_ratio: f64,
-        near: f64,
-        far: f64,
+        fov: f32,
+        aspect_ratio: f32,
+        near: f32,
+        far: f32,
     ) -> Camera {
         Camera {
             position,

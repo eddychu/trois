@@ -3,7 +3,7 @@ use crate::vector4::Vector4;
 use std::ops::Mul;
 #[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Matrix4 {
-    m: [f64; 16],
+    m: [f32; 16],
 }
 
 impl Matrix4 {
@@ -19,7 +19,7 @@ impl Matrix4 {
         }
     }
 
-    pub fn from_array(array: [f64; 16]) -> Matrix4 {
+    pub fn from_array(array: [f32; 16]) -> Matrix4 {
         Matrix4 { m: array.clone() }
     }
 
@@ -41,7 +41,7 @@ impl Matrix4 {
         }
     }
 
-    pub fn from_translation(x: f64, y: f64, z: f64) -> Matrix4 {
+    pub fn from_translation(x: f32, y: f32, z: f32) -> Matrix4 {
         Matrix4 {
             m: [
                 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, x, y, z, 1.0,
@@ -49,7 +49,7 @@ impl Matrix4 {
         }
     }
 
-    pub fn from_scaling(x: f64, y: f64, z: f64) -> Matrix4 {
+    pub fn from_scaling(x: f32, y: f32, z: f32) -> Matrix4 {
         Matrix4 {
             m: [
                 x, 0.0, 0.0, 0.0, 0.0, y, 0.0, 0.0, 0.0, 0.0, z, 0.0, 0.0, 0.0, 0.0, 1.0,
@@ -57,8 +57,40 @@ impl Matrix4 {
         }
     }
 
+    pub fn from_rotation(x: f32, y: f32, z: f32) -> Matrix4 {
+        let x_rad = x.to_radians();
+        let y_rad = y.to_radians();
+        let z_rad = z.to_radians();
+        let sx = x_rad.sin();
+        let sy = y_rad.sin();
+        let sz = z_rad.sin();
+        let cx = x_rad.cos();
+        let cy = y_rad.cos();
+        let cz = z_rad.cos();
+        Matrix4 {
+            m: [
+                cy * cz,
+                sx * sy * cz + cx * sz,
+                -cx * sy * cz + sx * sz,
+                0.0,
+                -cy * sz,
+                -sx * sy * sz + cx * cz,
+                cx * sy * sz + sx * cz,
+                0.0,
+                sy,
+                -sx * cy,
+                cx * cy,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+            ],
+        }
+    }
+
     pub fn look_at(eye: &Vector3, target: &Vector3, up: &Vector3) -> Matrix4 {
-        let f = (target.clone() - eye.clone()).normalize() * -1.0f64;
+        let f = (target.clone() - eye.clone()).normalize() * -1.0f32;
         let r = (*up).cross(&f).normalize();
         let u = f.cross(&r).normalize();
         let t = Vector3::new(-r.dot(&*eye), -u.dot(&*eye), -f.dot(&*eye));
@@ -69,7 +101,7 @@ impl Matrix4 {
         }
     }
 
-    pub fn frustum(left: f64, right: f64, bottom: f64, top: f64, near: f64, far: f64) -> Matrix4 {
+    pub fn frustum(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix4 {
         Matrix4 {
             m: [
                 2.0 * near / (right - left),
@@ -92,8 +124,8 @@ impl Matrix4 {
         }
     }
 
-    pub fn perspective(fov: f64, aspect: f64, near: f64, far: f64) -> Matrix4 {
-        let ymax = near * f64::tan(fov * 0.5);
+    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Matrix4 {
+        let ymax = near * f32::tan(fov * 0.5);
         let xmax = ymax * aspect;
         return Matrix4::frustum(-xmax, xmax, -ymax, ymax, near, far);
     }

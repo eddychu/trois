@@ -2,13 +2,13 @@ use std::ops::{Add, Mul, Sub};
 
 #[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Vector3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Vector3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Vector3 {
+    pub fn new(x: f32, y: f32, z: f32) -> Vector3 {
         Vector3 { x: x, y: y, z: z }
     }
 
@@ -20,11 +20,11 @@ impl Vector3 {
         }
     }
 
-    pub fn length(&self) -> f64 {
+    pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn length_squared(&self) -> f64 {
+    pub fn length_squared(&self) -> f32 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
@@ -45,8 +45,15 @@ impl Vector3 {
         }
     }
 
-    pub fn dot(&self, other: &Vector3) -> f64 {
+    pub fn dot(&self, other: &Vector3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        let r = (self.x * 255.0) as u32;
+        let g = (self.y * 255.0) as u32;
+        let b = (self.z * 255.0) as u32;
+        0xFF000000 | (r << 16) | (g << 8) | b
     }
 }
 
@@ -58,10 +65,10 @@ impl Mul for Vector3 {
     }
 }
 
-impl Mul<f64> for Vector3 {
+impl Mul<f32> for Vector3 {
     type Output = Vector3;
 
-    fn mul(self, rhs: f64) -> Vector3 {
+    fn mul(self, rhs: f32) -> Vector3 {
         Vector3::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
