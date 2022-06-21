@@ -1,5 +1,6 @@
 use crate::vector3::Vector3;
 use crate::vector4::Vector4;
+use crate::quat::Quat;
 use std::ops::Mul;
 #[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Matrix4 {
@@ -18,6 +19,8 @@ impl Matrix4 {
             ],
         }
     }
+
+
 
     pub fn from_array(array: [f32; 16]) -> Matrix4 {
         Matrix4 { m: array.clone() }
@@ -155,6 +158,29 @@ impl Matrix4 {
             self.m[i * 4 + 2],
             self.m[i * 4 + 3],
         )
+    }
+
+    pub fn up(&self) -> Vector3 {
+        Vector3::new(self.m[4], self.m[5], self.m[6])
+    }
+
+    pub fn forward(&self) -> Vector3 {
+        Vector3::new(self.m[8], self.m[9], self.m[10])
+    }
+
+    pub fn right(&self) -> Vector3 {
+        Vector3::new(self.m[0], self.m[1], self.m[2])
+    }
+
+
+
+
+    pub fn to_quat(&self) -> Quat {
+        let mut up = self.up().normalize();
+        let forward = self.forward().normalize();
+        let right = up.cross(&forward);
+        up = forward.cross(&right);
+        return Quat::look_dir(&forward, &up)
     }
 }
 

@@ -1,6 +1,8 @@
 use crate::vector3::Vector3;
 use std::ops::{Add, Mul, Sub};
-#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
+use std::cmp::PartialEq;
+use crate::math::K_EPSILON;
+#[derive(Clone, Debug, Copy)]
 pub struct Vector4 {
     pub x: f32,
     pub y: f32,
@@ -79,5 +81,11 @@ impl Sub for Vector4 {
             self.z - rhs.z,
             self.w - rhs.w,
         )
+    }
+}
+
+impl PartialEq for Vector4 {
+    fn eq(&self, other: &Vector4) -> bool {
+        (self.x - other.x).abs() < K_EPSILON && (self.y - other.y).abs() < K_EPSILON && (self.z - other.z).abs() < K_EPSILON && (self.w - other.w).abs() < K_EPSILON
     }
 }

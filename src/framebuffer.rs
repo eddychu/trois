@@ -1,9 +1,14 @@
+
+
+
 pub struct FrameBuffer {
     width: u32,
     height: u32,
     colors: Vec<u32>,
     depth: Vec<f32>,
 }
+
+
 
 impl FrameBuffer {
     pub fn new(width: u32, height: u32) -> FrameBuffer {

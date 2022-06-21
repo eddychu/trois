@@ -3,12 +3,15 @@ mod framebuffer;
 mod loader;
 mod matrix4;
 mod mesh;
+mod math;
 mod raster;
 mod renderer;
 mod texture;
 mod vector2;
 mod vector3;
 mod vector4;
+mod quat;
+mod transform;
 use framebuffer::FrameBuffer;
 use matrix4::Matrix4;
 use mesh::{Mesh, Vertex};
@@ -17,6 +20,8 @@ use texture::Texture;
 use vector2::Vector2;
 use vector3::Vector3;
 use vector4::Vector4;
+use quat::Quat;
+use transform::Transform;
 const WIDTH: usize = 640;
 const HEIGHT: usize = 480;
 
@@ -60,7 +65,7 @@ pub fn fragment_shader(varying: &Varying, uniform: &Uniform) -> Vector4 {
     let tex_coord = varying.tex_coord;
     let tex_color = uniform
         .diffuse_texture
-        .get_pixel_from_uv(tex_coord.x, tex_coord.y);
+        .sample(tex_coord.x, tex_coord.y);
     tex_color
 }
 
@@ -79,11 +84,11 @@ pub fn get_box2d(vertices: &[Vector4]) -> Box2D {
     }
 }
 
-pub fn is_back_face(vertex1: &Vector3, vertex2: &Vector3, vertex3: &Vector3) -> bool {
-    let edge1 = *vertex2 - *vertex1;
-    let edge2 = *vertex3 - *vertex1;
+pub fn is_back_face(vertices: &[Vector4]) -> bool {
+    let edge1 = (vertices[1] - vertices[0]).xyz();
+    let edge2 = (vertices[2] - vertices[0]).xyz();
     let normal = edge1.cross(&edge2);
-    normal.z < 0.0
+    return normal.z < 0.0;
 }
 
 pub fn draw_triangle(framebuffer: &mut FrameBuffer, vertices: &[Vertex], uniform: &Uniform) {
@@ -106,12 +111,21 @@ pub fn draw_triangle(framebuffer: &mut FrameBuffer, vertices: &[Vertex], uniform
     for i in 0..3 {
         let vertex = &vertices[i];
         let vertex_output = vertex_shader(&vertex, uniform);
-        gl_positions[i] = perspective_divide(vertex_output.position);
-        gl_positions[i] =
-            viewport_transform(gl_positions[i], (WIDTH - 1) as f32, (HEIGHT - 1) as f32);
-
+        gl_positions[i] = vertex_output.position;       
         varyings[i] = vertex_output.varying;
     }
+
+    if is_back_face(&gl_positions) {
+        return;
+    }
+
+    for i in 0..3 {
+        gl_positions[i] = perspective_divide(gl_positions[i]);
+        gl_positions[i] =
+        viewport_transform(gl_positions[i], (WIDTH - 1) as f32, (HEIGHT - 1) as f32);
+    }
+
+    
 
     let mut bbox = get_box2d(&gl_positions);
     bbox.min.x = bbox.min.x.max(0.0);
@@ -129,7 +143,7 @@ pub fn draw_triangle(framebuffer: &mut FrameBuffer, vertices: &[Vertex], uniform
                     + gl_positions[2].z * bary.z;
 
                 if frag_pos.z >= 0.0 && frag_pos.z <= 1.0 {
-                    if frag_pos.z < framebuffer.get_depth(x, y) {
+                    if frag_pos.z <= framebuffer.get_depth(x, y) {
                         framebuffer.set_depth(x, y, frag_pos.z);
                         frag_pos.w = gl_positions[0].w * bary.x
                             + gl_positions[1].w * bary.y
@@ -207,12 +221,16 @@ fn main() {
         100.0,
     );
 
-    let mesh = Mesh::from_obj_file("resource/african_head/african_head.obj");
+    let mut mesh = Mesh::from_obj_file("assets/helmet/helmet.obj");
+    
+    let diffuse_texture = Texture::load("assets/helmet/helmet_basecolor.tga");
 
-    let diffuse_texture = Texture::load("resource/african_head/african_head_diffuse.tga");
+
+    // let mesh = Mesh::from_obj_file("assets/crab/crab.obj");
+    // let diffuse_texture = Texture::load("assets/crab/crab_diffuse.tga");
 
     let mut uniform = Uniform {
-        model: mesh.transform,
+        model: mesh.transform.to_mat4(),
         view: camera.get_view_matrix(),
         projection: camera.get_projection_matrix(),
         diffuse_texture,
@@ -230,10 +248,24 @@ fn main() {
         panic!("{}", e);
     });
 
+    let mut angle = 0.0;
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
+
+        window.get_keys_released().iter().for_each(|key| match key {
+            Key::Right => println!("Right"),
+            _ => (),
+        });
+
         framebuffer.clear(0xFF000000);
         let start = std::time::Instant::now();
-        uniform.model = Matrix4::from_rotation(0.0, 0.0, 0.0);
+        angle += 0.1;
+        let rotation = Quat::angle_axis(angle, &Vector3::new(0.0, 1.0, 0.0));
+
+        mesh.transform.rotation = rotation;
+        uniform.model = mesh.transform.to_mat4();
+
+        // println!("{:?}", uniform.model);
         for i in (0..mesh.indices.len()).step_by(3) {
             let i0 = mesh.indices[i];
             let i1 = mesh.indices[i + 1];
@@ -241,15 +273,14 @@ fn main() {
             let v0 = mesh.vertices[i0];
             let v1 = mesh.vertices[i1];
             let v2 = mesh.vertices[i2];
-            if !is_back_face(&v0.position, &v1.position, &v2.position) {
-                let vertices = [v0, v1, v2];
-                // println!("{:?}", vertices);
-                draw_triangle(&mut framebuffer, &vertices, &uniform);
-            }
+            let vertices = [v0, v1, v2];
+            draw_triangle(&mut framebuffer, &vertices, &uniform);
         }
         // draw_triangle(&mut framebuffer, &vertices, &uniform);
         let frame_time = start.elapsed();
         println!("{}", frame_time.as_secs_f32());
+
+
 
         window
             .update_with_buffer(framebuffer.get_colors(), WIDTH, HEIGHT)

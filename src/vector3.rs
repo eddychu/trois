@@ -1,6 +1,7 @@
 use std::ops::{Add, Mul, Sub};
-
-#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
+use std::cmp::{PartialEq};
+use crate::math::K_EPSILON;
+#[derive(Clone, Debug, Copy)]
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
@@ -86,5 +87,12 @@ impl Add for Vector3 {
 
     fn add(self, rhs: Vector3) -> Vector3 {
         Vector3::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+    }
+}
+
+
+impl PartialEq for Vector3 {
+    fn eq(&self, other: &Vector3) -> bool {
+        (self.x - other.x).abs() < K_EPSILON && (self.y - other.y).abs() < K_EPSILON && (self.z - other.z).abs() < K_EPSILON
     }
 }

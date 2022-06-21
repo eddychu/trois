@@ -1,6 +1,7 @@
 use crate::matrix4::Matrix4;
 use crate::vector2::Vector2;
 use crate::vector3::Vector3;
+use crate::transform::Transform;
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -27,7 +28,7 @@ pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub indices: Vec<usize>,
     pub diffuse_texture: Option<String>,
-    pub transform: Matrix4,
+    pub transform: Transform,
 }
 
 impl Mesh {
@@ -36,7 +37,7 @@ impl Mesh {
             vertices: Vec::new(),
             indices: Vec::new(),
             diffuse_texture: None,
-            transform: Matrix4::identity(),
+            transform: Transform::identity(),
         }
     }
 
@@ -116,7 +117,7 @@ impl Mesh {
             vertices,
             indices,
             diffuse_texture: None,
-            transform: Matrix4::identity(),
+            transform: Transform::identity(),
         }
     }
 }
