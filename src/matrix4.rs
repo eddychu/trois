@@ -4,7 +4,7 @@ use crate::quat::Quat;
 use std::ops::Mul;
 #[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
 pub struct Matrix4 {
-    m: [f32; 16],
+    pub m: [f32; 16],
 }
 
 impl Matrix4 {
@@ -92,16 +92,59 @@ impl Matrix4 {
         }
     }
 
-    pub fn look_at(eye: &Vector3, target: &Vector3, up: &Vector3) -> Matrix4 {
+    pub fn look_at(eye: Vector3, target: Vector3, up: Vector3) -> Matrix4 {
         let f = (target.clone() - eye.clone()).normalize() * -1.0f32;
-        let r = (*up).cross(&f).normalize();
-        let u = f.cross(&r).normalize();
-        let t = Vector3::new(-r.dot(&*eye), -u.dot(&*eye), -f.dot(&*eye));
+        let r = (up).cross(f).normalize();
+        let u = f.cross(r).normalize();
+        let t = Vector3::new(-r.dot(eye), -u.dot(eye), -f.dot(eye));
         Matrix4 {
             m: [
                 r.x, u.x, f.x, 0.0, r.y, u.y, f.y, 0.0, r.z, u.z, f.z, 0.0, t.x, t.y, t.z, 1.0,
             ],
         }
+    }
+
+    pub fn minor(&self, c0: usize, c1: usize, c2: usize, r0: usize,  r1: usize, r2: usize) -> f32 {
+        self.m[c0 * 4 + r0] * (self.m[c1 * 4 + r1] * self.m[c2 * 4 + r2] - self.m[c1 * 4 + r2] * self.m[c2 * 4 + r1]) - 
+        self.m[c1 * 4 + r0] * (self.m[c0 * 4 + r1] * self.m[c2 * 4 + r2] - self.m[c0 * 4 + r2] * self.m[c2 * 4 + r1]) + 
+        self.m[c2 * 4 + r0] * (self.m[c0 * 4 + r1] * self.m[c1 * 4 + r2] - self.m[c0 * 4 + r2] * self.m[c1 * 4 + r1])
+    }
+
+    pub fn determinant(&self) -> f32 {
+        self.m[0] * self.minor(1, 2, 3, 1, 2, 3) 
+        - self.m[4] * self.minor(0, 2, 3, 1, 2, 3)
+        + self.m[8] * self.minor(0, 1, 3, 1, 2, 3)
+         - self.m[12] * self.minor(0, 1, 2, 1, 2, 3)
+    }
+
+    pub fn adjugate(&self) -> Matrix4 {
+        let mut cofactor = Matrix4::new();
+        cofactor.m[0] = self.minor(1, 2, 3, 1, 2, 3);
+        cofactor.m[1] = -self.minor(1, 2, 3, 0, 2, 3);
+        cofactor.m[2] = self.minor(1, 2, 3, 0, 1, 3);
+        cofactor.m[3] = -self.minor(1, 2, 3, 0, 1, 2);
+        cofactor.m[4] = -self.minor(0, 2, 3, 1, 2, 3);
+        cofactor.m[5] = self.minor(0, 2, 3, 0, 2, 3);
+        cofactor.m[6] = -self.minor(0, 2, 3, 0, 1, 3);
+        cofactor.m[7] = self.minor(0, 2, 3, 0, 1, 2);
+        cofactor.m[8] = self.minor(0, 1, 3, 1, 2, 3);
+        cofactor.m[9] = -self.minor(0, 1, 3, 0, 2, 3);
+        cofactor.m[10] = self.minor(0, 1, 3, 0, 1, 3);
+        cofactor.m[11] = -self.minor(0, 1, 3, 0, 1, 2);
+        cofactor.m[12] = -self.minor(0, 1, 2, 1, 2, 3);
+        cofactor.m[13] = self.minor(0, 1, 2, 0, 2, 3);
+        cofactor.m[14] = -self.minor(0, 1, 2, 0, 1, 3);
+        cofactor.m[15] = self.minor(0, 1, 2, 0, 1, 2);
+        cofactor.transpose()
+    }
+
+    pub fn inverse(&self) -> Matrix4 {
+        let det = self.determinant();
+        if det == 0.0 {
+            panic!("Cannot invert matrix with determinant 0");
+        }
+        let adj = self.adjugate();
+        adj * (1.0 / det)
     }
 
     pub fn frustum(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Matrix4 {
@@ -178,8 +221,8 @@ impl Matrix4 {
     pub fn to_quat(&self) -> Quat {
         let mut up = self.up().normalize();
         let forward = self.forward().normalize();
-        let right = up.cross(&forward);
-        up = forward.cross(&right);
+        let right = up.cross(forward);
+        up = forward.cross(right);
         return Quat::look_dir(&forward, &up)
     }
 }
@@ -221,6 +264,32 @@ impl Mul<Vector4> for Matrix4 {
             self.row(2).dot(&other),
             self.row(3).dot(&other),
         )
+    }
+}
+
+impl Mul<f32> for Matrix4 {
+    type Output = Matrix4;
+    fn mul(self, other: f32) -> Matrix4 {
+        Matrix4 {
+            m: [
+                self.m[0] * other,
+                self.m[1] * other,
+                self.m[2] * other,
+                self.m[3] * other,
+                self.m[4] * other,
+                self.m[5] * other,
+                self.m[6] * other,
+                self.m[7] * other,
+                self.m[8] * other,
+                self.m[9] * other,
+                self.m[10] * other,
+                self.m[11] * other,
+                self.m[12] * other,
+                self.m[13] * other,
+                self.m[14] * other,
+                self.m[15] * other,
+            ],
+        }
     }
 }
 

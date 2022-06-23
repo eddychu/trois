@@ -10,9 +10,15 @@ mod texture;
 mod vector2;
 mod vector3;
 mod vector4;
+mod light;
 mod quat;
 mod transform;
+mod material;
+mod matrix3;
+use std::{f32::consts::PI, fs::metadata};
+
 use framebuffer::FrameBuffer;
+use math::{srgb_to_linear, linear_to_srgb};
 use matrix4::Matrix4;
 use mesh::{Mesh, Vertex};
 use minifb::{Key, Window, WindowOptions};
@@ -20,22 +26,32 @@ use texture::Texture;
 use vector2::Vector2;
 use vector3::Vector3;
 use vector4::Vector4;
+use matrix3::Matrix3;
 use quat::Quat;
+use light::Light;
 use transform::Transform;
+use material::Material;
+
 const WIDTH: usize = 640;
 const HEIGHT: usize = 480;
 
 pub struct Uniform {
-    model: Matrix4,
-    view: Matrix4,
+    mv: Matrix4,
+    normal_matrix: Matrix3,
     projection: Matrix4,
-    diffuse_texture: Texture,
+    light: Light,
+    ao_tex : Texture,
+    emissive_tex: Texture,
+    albedo_tex: Texture,
+    metal_roughness_tex: Texture,
+    normal_tex: Texture,
 }
 
 #[derive(Copy, Clone)]
 pub struct Varying {
     tex_coord: Vector2,
     normal: Vector3,
+    position: Vector3,
 }
 
 pub struct VertexOutput {
@@ -50,23 +66,104 @@ pub struct Box2D {
 }
 
 pub fn vertex_shader(vertex: &Vertex, uniform: &Uniform) -> VertexOutput {
-    let position = uniform.projection
-        * uniform.view
-        * uniform.model
+    let view_pos = uniform.mv * Vector4::new(
+        vertex.position.x,
+        vertex.position.y,
+        vertex.position.z,
+        1.0,
+    );
+
+    let normal = (uniform.mv * Vector4::new(vertex.normal.x, vertex.normal.y, vertex.normal.z, 0.0)).xyz().normalize();
+
+    // let normal = (uniform.normal_matrix * vertex.normal).normalize();
+    
+
+    let position = uniform.projection * uniform.mv
         * Vector4::new(vertex.position.x, vertex.position.y, vertex.position.z, 1.0);
     let varying = Varying {
         tex_coord: vertex.tex_coord,
-        normal: vertex.normal,
+        normal,
+        position: view_pos.xyz(),
     };
     VertexOutput { position, varying }
 }
 
+
+fn distribution_factor(n_dot_h: f32, alpha2: f32) -> f32 {
+    let n_dot_h_2 = n_dot_h * n_dot_h;
+    let factor = n_dot_h_2 * (alpha2 - 1.0) + 1.0;
+    alpha2 / (PI * factor * factor)
+}
+
+fn geom_smith_factor(dot_product: f32, roughness: f32) -> f32 {
+    let k = (roughness + 1.0) * (roughness + 1.0) / 8.0;
+    let mut denom = dot_product * (1.0 - k) + k;
+    if denom <= 0.0 {
+        denom = 0.0001;
+    }
+    return 1.0 / denom;
+} 
+
+
+
+fn fresnel(v_dot_h: f32, f0: Vector3) -> Vector3 {
+    return f0 + (Vector3::new(1.0, 1.0, 1.0) - f0) * ((1.0 - v_dot_h).clamp(0.0, 1.0).powf(5.0));
+}
+
 pub fn fragment_shader(varying: &Varying, uniform: &Uniform) -> Vector4 {
-    let tex_coord = varying.tex_coord;
-    let tex_color = uniform
-        .diffuse_texture
-        .sample(tex_coord.x, tex_coord.y);
-    tex_color
+    let normal = varying.normal.normalize();
+    let uv = varying.tex_coord;
+    let ao = uniform.ao_tex.sample(uv).x;
+    let emission = uniform.emissive_tex.sample(uv).xyz();
+
+    let albedo = uniform.albedo_tex.sample(uv).xyz();
+    let mr = uniform.metal_roughness_tex.sample(uv);
+    let roughness = mr.y;
+    let metallic = mr.z;
+    let v = -varying.position;
+    let mut f0 = Vector3::new(0.04, 0.04, 0.04);
+    f0 = f0 * (1.0 - metallic) + albedo * metallic;
+    let mut l = uniform.light.transform.position - varying.position;
+    let distance_sqr = l.length_squared();
+    l = l.normalize();
+    let h = (v + l).normalize();
+    let n_dot_v  = normal.dot(v).max(0.0);
+    
+    let n_dot_l = normal.dot(l);
+    if n_dot_l <= 0.0 {
+        return Vector4::new(0.0, 0.0, 0.0, 1.0);
+    }
+    let n_dot_h = normal.dot(h).max(0.0);
+    let v_dot_h = v.dot(h).max(0.0);
+    let attenuation = 1.0 / distance_sqr;
+    let radiance = uniform.light.intensity * attenuation;
+    let alpha_roughness = roughness * roughness;
+    let alpha2 = alpha_roughness * alpha_roughness;
+    let d_term = distribution_factor(n_dot_h, alpha2);
+    let v_term: f32 = geom_smith_factor(n_dot_l, roughness) * geom_smith_factor(n_dot_v, roughness);
+    let f_term = fresnel(v_dot_h, f0);
+    // println!("{:?}", f_term);
+    let diffuse = albedo * (1.0 / PI);
+    let specular = f_term * v_term * d_term * 0.25;
+
+    let mut color = diffuse + specular + emission; 
+    let ambient = Vector3::new(0.1, 0.1, 0.1) * ao;
+    // println!("{:?}", color);
+    color = color * n_dot_l * radiance;
+    color = color + emission + ambient;
+    color.x = color.x.clamp(0.0, 1.0);
+    color.y = color.y.clamp(0.0, 1.0);
+    color.z = color.z.clamp(0.0, 1.0);
+    // color = Vector3::new(linear_to_srgb(color.x), linear_to_srgb(color.y), linear_to_srgb(color.z));
+
+    Vector4::new(color.x, color.y, color.z, 1.0)
+
+    // let light_dir = uniform.light.transform.position - varying.position;
+
+    // let n_dot_l = normal.dot(light_dir.normalize()).max(0.0);
+
+    // Vector4::from_vector3(k_ao * k_d * n_dot_l + k_e.xyz())
+    // Vector4::from_vector3(normal)
 }
 
 pub fn get_box2d(vertices: &[Vector4]) -> Box2D {
@@ -87,7 +184,7 @@ pub fn get_box2d(vertices: &[Vector4]) -> Box2D {
 pub fn is_back_face(vertices: &[Vector4]) -> bool {
     let edge1 = (vertices[1] - vertices[0]).xyz();
     let edge2 = (vertices[2] - vertices[0]).xyz();
-    let normal = edge1.cross(&edge2);
+    let normal = edge1.cross(edge2);
     return normal.z < 0.0;
 }
 
@@ -96,6 +193,7 @@ pub fn draw_triangle(framebuffer: &mut FrameBuffer, vertices: &[Vertex], uniform
         Varying {
             tex_coord: vertices[0].tex_coord,
             normal: vertices[0].normal,
+            position: vertices[0].position,
         };
         3
     ];
@@ -164,7 +262,10 @@ pub fn draw_triangle(framebuffer: &mut FrameBuffer, vertices: &[Vertex], uniform
                         let normal = varyings[0].normal * bary_correct.x
                             + varyings[1].normal * bary_correct.y
                             + varyings[2].normal * bary_correct.z;
-                        let varying = Varying { tex_coord, normal };
+                        let position = varyings[0].position * bary_correct.x
+                            + varyings[1].position * bary_correct.y
+                            + varyings[2].position * bary_correct.z;
+                        let varying = Varying { tex_coord, normal, position };
                         let frag_color = fragment_shader(&varying, uniform);
                         framebuffer.set_color(x, y, frag_color.to_u32());
                     }
@@ -221,20 +322,38 @@ fn main() {
         100.0,
     );
 
+    
+
+    let mut light = Light::new(Vector3::new(0.2, 0.2, 0.2), Vector3::new(5.0, 5.0, 5.0), Transform::identity());
+    light.transform.position = (camera.get_view_matrix() * Vector4::from_vector3(Vector3::new(0.0, 0.0, 3.0))).xyz();
+
+    // let mut mesh = Mesh::from_obj_file("assets/common/box.obj");
+
     let mut mesh = Mesh::from_obj_file("assets/helmet/helmet.obj");
     
-    let diffuse_texture = Texture::load("assets/helmet/helmet_basecolor.tga");
-
+    let albedo_tex = Texture::load("assets/helmet/helmet_basecolor.tga");
+    let normal_tex = Texture::load("assets/helmet/helmet_normal.tga");
+    let metal_roughness_tex = Texture::load("assets/helmet/helmet_metalRoughness.jpg");
+    let emissive_tex = Texture::load("assets/helmet/helmet_emission.tga");
+    let ao_tex = Texture::load("assets/helmet/helmet_occlusion.tga");
+   
 
     // let mesh = Mesh::from_obj_file("assets/crab/crab.obj");
     // let diffuse_texture = Texture::load("assets/crab/crab_diffuse.tga");
-
+   
     let mut uniform = Uniform {
-        model: mesh.transform.to_mat4(),
-        view: camera.get_view_matrix(),
+        mv : Matrix4::identity(),
+        normal_matrix: Matrix3::identity(),
         projection: camera.get_projection_matrix(),
-        diffuse_texture,
+        albedo_tex,
+        metal_roughness_tex,
+        emissive_tex,
+        ao_tex,
+        normal_tex,
+        light,
     };
+
+
 
     let mut framebuffer = FrameBuffer::new(WIDTH as u32, HEIGHT as u32);
 
@@ -263,8 +382,12 @@ fn main() {
         let rotation = Quat::angle_axis(angle, &Vector3::new(0.0, 1.0, 0.0));
 
         mesh.transform.rotation = rotation;
-        uniform.model = mesh.transform.to_mat4();
-
+        uniform.mv = camera.get_view_matrix() * mesh.transform.to_mat4();
+        let normal = Matrix3::from_mat4(uniform.mv);
+        uniform.normal_matrix = normal;
+        // let light_pos = camera.get_view_matrix() * Vector4::new(light.transform.position.x, 
+        //         light.transform.position.y, light.transform.position.z, 1.0);
+        // uniform.light.transform.position = Vector3::new(light_pos.x, light_pos.y, light_pos.z);
         // println!("{:?}", uniform.model);
         for i in (0..mesh.indices.len()).step_by(3) {
             let i0 = mesh.indices[i];

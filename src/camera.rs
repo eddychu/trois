@@ -34,7 +34,7 @@ impl Camera {
     }
 
     pub fn get_view_matrix(&self) -> Matrix4 {
-        Matrix4::look_at(&self.position, &self.target, &self.up)
+        Matrix4::look_at(self.position, self.target, self.up)
     }
 
     pub fn get_projection_matrix(&self) -> Matrix4 {

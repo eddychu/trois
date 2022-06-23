@@ -35,6 +35,9 @@ impl Vector4 {
     pub fn xyz(&self) -> Vector3 {
         Vector3::new(self.x, self.y, self.z)
     }
+    pub fn from_vector3(v: Vector3) -> Vector4 {
+        Vector4::new(v.x, v.y, v.z, 1.0)
+    }
 }
 
 impl Mul for Vector4 {

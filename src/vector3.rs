@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub};
+use std::ops::{Add, Mul, Sub, Neg};
 use std::cmp::{PartialEq};
 use crate::math::K_EPSILON;
 #[derive(Clone, Debug, Copy)]
@@ -21,6 +21,10 @@ impl Vector3 {
         }
     }
 
+    pub fn reflect(&self, normal: Vector3) -> Vector3 {
+        *self - normal * 2.0 * self.dot(normal)
+    }
+
     pub fn length(&self) -> f32 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
@@ -38,7 +42,7 @@ impl Vector3 {
         }
     }
 
-    pub fn cross(&self, other: &Vector3) -> Vector3 {
+    pub fn cross(&self, other: Vector3) -> Vector3 {
         Vector3 {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
@@ -46,7 +50,7 @@ impl Vector3 {
         }
     }
 
-    pub fn dot(&self, other: &Vector3) -> f32 {
+    pub fn dot(&self, other: Vector3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
@@ -94,5 +98,13 @@ impl Add for Vector3 {
 impl PartialEq for Vector3 {
     fn eq(&self, other: &Vector3) -> bool {
         (self.x - other.x).abs() < K_EPSILON && (self.y - other.y).abs() < K_EPSILON && (self.z - other.z).abs() < K_EPSILON
+    }
+}
+
+impl Neg for Vector3 {
+    type Output = Vector3;
+
+    fn neg(self) -> Vector3 {
+        Vector3::new(-self.x, -self.y, -self.z)
     }
 }

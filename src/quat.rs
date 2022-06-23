@@ -1,4 +1,3 @@
-use std::f64::EPSILON;
 use std::ops::{Add, Sub, Mul, Neg};
 use std::cmp::{PartialEq};
 use crate::vector3::Vector3;
@@ -51,19 +50,19 @@ impl Quat {
             if f.z.abs() < f.y.abs() && f.z.abs() < f.x.abs() {
                 ortho = Vector3::new(0.0, 0.0, 1.0);
             }
-            let axis = f.cross(&ortho).normalize();
+            let axis = f.cross(ortho).normalize();
             return Quat::new(axis.x, axis.y, axis.z, 0.0);
         }
         let half = (f + t).normalize();
-        let axis = f.cross(&half);
-        return Quat::new(axis.x, axis.y, axis.z, f.dot(&half));
+        let axis = f.cross(half);
+        return Quat::new(axis.x, axis.y, axis.z, f.dot(half));
     }
 
     pub fn look_dir(dir: &Vector3, up: &Vector3) -> Quat {
         let dir = dir.normalize();
         let up = up.normalize();
-        let right = dir.cross(&up).normalize();
-        let up = dir.cross(&right);
+        let right = dir.cross(up).normalize();
+        let up = dir.cross(right);
         let from = Vector3::new(0.0, 0.0, 1.0);
         let f2d = Quat::from_to(&from, &dir);
         let object_up = f2d * Vector3::new(0.0, 1.0, 0.0);
@@ -168,7 +167,7 @@ impl Mul<Vector3> for Quat {
     type Output = Vector3;
     fn mul(self, other: Vector3) -> Vector3 {
         let vector = Vector3::new(self.x, self.y, self.z);
-        vector * 2.0 * vector.dot(&other) + other * (self.w * self.w - vector.dot(&vector)) + vector.cross(&other) * 2.0 * self.w
+        vector * 2.0 * vector.dot(other) + other * (self.w * self.w - vector.dot(vector)) + vector.cross(other) * 2.0 * self.w
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::vector4::Vector4;
+use crate::{vector4::Vector4, vector2::Vector2};
 use image;
 use crate::math::srgb_to_linear;
 
@@ -39,7 +39,9 @@ impl Texture {
         )
     }
 
-    pub fn sample(&self, u: f32, v: f32) -> Vector4 {
+    pub fn sample(&self, uv: Vector2) -> Vector4 {
+        let u = uv.x;
+        let v = uv.y;
         let u = u - u.floor();
         let v = v - v.floor();
         let c = (u * (self.width - 1) as f32) as u32;
@@ -48,4 +50,10 @@ impl Texture {
     }
 
 
+}
+
+impl Clone for Texture {
+    fn clone(&self) -> Texture {
+        Texture::new(self.image.clone(), self.width, self.height)
+    }
 }

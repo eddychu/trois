@@ -2,6 +2,8 @@
 use crate::vector3::Vector3;
 use crate::matrix4::Matrix4;
 use crate::quat::Quat;
+
+#[derive(Clone, Debug, Copy)]
 pub struct Transform {
     pub position: Vector3,
     pub rotation: Quat,
